@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="mangohud-fps-switch-gui"
+        Arguments=""
+        InstallLocation="C:\Program Files\s3r3nity-labs\MangoHud FPS Switch">
+    </Installer>
+    <PackageInformation
+        PackageName="MangoHud FPS Switch"
+        PackageDisplayName="MangoHud FPS Switch"
+        PublisherName="CN=s3r3nity-labs"
+        PublisherDisplayName="s3r3nity-labs"
+        Version="0.1.0.0"
+        PackageDescription="Switch MangoHud's FPS limit with profiles, also while a game is running">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="org.s3r3nity.MangoHudFPSSwitch"
+                Description="Switch MangoHud's FPS limit with profiles, also while a game is running"
+                DisplayName="MangoHud FPS Switch"
+                ExecutableName="mangohud-fps-switch-gui"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>MangoHud FPS Switch</DisplayName>
+            <PublisherDisplayName>s3r3nity-labs</PublisherDisplayName>
+            <Description>Switch MangoHud's FPS limit with profiles, also while a game is running</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="mangohud-fps-switch-gui.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

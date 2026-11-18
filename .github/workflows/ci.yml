@@ -36,3 +36,31 @@ jobs:
         with:
           version: "~> v2"
           args: check
+
+  # The desktop app (gui/, own Go module): frontend type check and build, Go tests
+  gui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: gui/go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: gui/frontend/package-lock.json
+      - name: GTK 4 and WebKitGTK headers (Wails uses them through cgo)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Frontend
+        working-directory: gui/frontend
+        run: |
+          npm ci
+          npm run check
+          npm run build
+      - run: go vet .
+      - run: go test -race .
+
