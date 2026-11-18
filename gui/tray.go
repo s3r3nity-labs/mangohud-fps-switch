@@ -132,6 +132,22 @@ func (t *tray) refresh() {
 	}
 	t.icon.SetMenu(menu)
 	t.icon.SetTooltip(trayTooltip(st, err))
+	announceTooltip()
+}
+
+// announceTooltip tells the desktop that the tooltip changed. Wails 3.1 only updates the
+// ToolTip property, but tray hosts like KDE Plasma re-read it on the NewToolTip signal (as
+// they re-read the icon on NewIcon, which Wails does send), so the hover text would stay
+// the first one. It has to come from the tray's own D-Bus connection: Wails uses godbus'
+// shared session connection, which dbus.SessionBus returns here too.
+func announceTooltip() {
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		return
+	}
+	if err := conn.Emit("/StatusNotifierItem", "org.kde.StatusNotifierItem.NewToolTip"); err != nil {
+		log.Printf("tray tooltip: %v", err)
+	}
 }
 
 // trayAvailable reports whether the desktop shows tray icons (StatusNotifierItem: KDE
