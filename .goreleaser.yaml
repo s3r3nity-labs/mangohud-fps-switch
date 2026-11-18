@@ -1,0 +1,50 @@
+# Release builds, run by .github/workflows/release.yml.
+# Local test without publishing: goreleaser release --snapshot --clean
+version: 2
+
+builds:
+  - env:
+      - CGO_ENABLED=0 # static binary, runs on any Linux
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/s3r3nity-labs/mangohud-fps-switch/cmd.version={{ .Tag }}
+
+archives:
+  - formats: [tar.gz]
+    # No version in the name, so .../releases/latest/download/<name> always works
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files: [README.md, LICENSE]
+
+checksum:
+  name_template: checksums.txt
+
+# The release notes come from the web UI ("Generate release notes")
+changelog:
+  disable: true
+
+release:
+  mode: keep-existing
+
+# Homebrew cask in s3r3nity-labs/homebrew-tap:
+#   brew install s3r3nity-labs/tap/mangohud-fps-switch
+# The token (fine-grained, Contents read/write on homebrew-tap only) is the repository
+# secret HOMEBREW_TAP_GITHUB_TOKEN, passed in by release.yml.
+homebrew_casks:
+  - name: mangohud-fps-switch
+    binaries: [mangohud-fps-switch]
+    homepage: https://github.com/s3r3nity-labs/mangohud-fps-switch
+    description: Switch MangoHud's FPS limit with profiles, also while a game is running
+    # Only Linux archives are built. Needs a current Homebrew (brew update); older ones
+    # reject this and the generated zap stanza
+    custom_block: |
+      depends_on :linux
+    commit_author:
+      name: s3r3nity-labs release
+      email: thomas@tacke.email
+    commit_msg_template: "mangohud-fps-switch {{ .Tag }}"
+    repository:
+      owner: s3r3nity-labs
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"

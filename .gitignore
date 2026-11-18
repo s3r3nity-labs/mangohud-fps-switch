@@ -1,0 +1,8 @@
+# Binaries
+/mangohud-fps-switch
+/dist/
+
+# Test and coverage output
+*.test
+*.out
+
