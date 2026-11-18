@@ -1,98 +1,37 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"slices"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
-	"github.com/s3r3nity-labs/mangohud-fps-switch/internal/mangohud"
+	"github.com/s3r3nity-labs/mangohud-fps-switch/internal/app"
 	"github.com/s3r3nity-labs/mangohud-fps-switch/internal/profiles"
 )
 
-// env is everything a command works with, loaded once per run.
-type env struct {
-	cfg        profiles.Config
-	cfgPath    string
-	mango      string // MangoHud config to change
-	mangoIsStd bool   // the global one, not chosen by mangohud_config or MANGOHUD_CONFIGFILE
-}
-
-func load(cmd *cobra.Command, d deps, opts *options) (*env, error) {
-	e := &env{cfgPath: opts.configPath}
-	if e.cfgPath == "" {
-		p, err := profiles.Path(d.getenv)
-		if err != nil {
-			return nil, err
-		}
-		e.cfgPath = p
-	}
-	cfg, created, err := profiles.Load(e.cfgPath)
-	if created {
+// load reads config.toml (writing the defaults on the first run, and saying so).
+func load(cmd *cobra.Command, d deps, opts *options) (*app.App, error) {
+	a, err := app.Load(d.getenv, opts.configPath)
+	if a != nil && a.Created {
 		fmt.Fprintf(cmd.ErrOrStderr(), "Created %s with %d profiles, edit it to change them.\n",
-			e.cfgPath, len(cfg.Profiles))
+			a.ConfigPath, len(a.Config.Profiles))
 	}
-	if err != nil {
-		return nil, err
-	}
-	e.cfg = cfg
-
-	switch {
-	case cfg.MangoHudConfig != "":
-		e.mango = expandHome(cfg.MangoHudConfig, d.getenv("HOME"))
-	default:
-		p, err := mangohud.DefaultPath(d.getenv)
-		if err != nil {
-			return nil, err
-		}
-		e.mango = p
-		e.mangoIsStd = d.getenv("MANGOHUD_CONFIGFILE") == ""
-	}
-	return e, nil
+	return a, err
 }
 
-func expandHome(p, home string) string {
-	if p == "~" {
-		return home
-	}
-	if rest, ok := strings.CutPrefix(p, "~/"); ok {
-		return filepath.Join(home, rest)
-	}
-	return p
-}
-
-// current reads MangoHud's config, with a helpful error if it's missing.
-func (e *env) current() (map[string]string, error) {
-	values, err := mangohud.Read(e.mango)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("MangoHud config not found: %s\n"+
-			"Create it (e.g. with GOverlay, or from MangoHud's example config), or set "+
-			"mangohud_config in %s", e.mango, e.cfgPath)
-	}
-	return values, err
-}
-
-// apply writes settings to MangoHud's config, prints what happened and notifies.
-func apply(cmd *cobra.Command, d deps, opts *options, e *env, settings map[string]string, profile string) error {
-	if _, err := e.current(); err != nil {
-		return err
-	}
-	if err := mangohud.Set(e.mango, settings); err != nil {
-		return err
-	}
-	label := profiles.FPS(settings["fps_limit"]).Label()
+// done prints what was set and shows a notification.
+func done(cmd *cobra.Command, d deps, opts *options, a *app.App, fps profiles.FPS, profile string) {
+	label := fps.Label()
 	msg := "MangoHud: " + label
 	if profile != "" {
 		msg += fmt.Sprintf(" (profile %q)", profile)
 	}
 	fmt.Fprintln(cmd.OutOrStdout(), msg)
 
-	if e.cfg.ShouldNotify() && !opts.noNotify {
+	if a.Config.ShouldNotify() && !opts.noNotify {
 		body := ""
 		if profile != "" && !strings.EqualFold(profile, label) {
 			body = "Profile: " + profile
@@ -101,7 +40,6 @@ func apply(cmd *cobra.Command, d deps, opts *options, e *env, settings map[strin
 			fmt.Fprintf(cmd.ErrOrStderr(), "No desktop notification: %v\n", err)
 		}
 	}
-	return nil
 }
 
 func setFPS(cmd *cobra.Command, d deps, opts *options, arg string) error {
@@ -109,16 +47,24 @@ func setFPS(cmd *cobra.Command, d deps, opts *options, arg string) error {
 	if err != nil {
 		return err
 	}
-	e, err := load(cmd, d, opts)
+	a, err := load(cmd, d, opts)
 	if err != nil {
 		return err
 	}
-	return apply(cmd, d, opts, e, map[string]string{"fps_limit": string(fps)}, "")
+	if err := a.SetFPS(fps); err != nil {
+		return err
+	}
+	done(cmd, d, opts, a, fps, "")
+	return nil
 }
 
-func setProfile(cmd *cobra.Command, d deps, opts *options, e *env, i int) error {
-	p := e.cfg.Profiles[i]
-	return apply(cmd, d, opts, e, p.MangoHudSettings(), p.Name)
+func setProfile(cmd *cobra.Command, d deps, opts *options, a *app.App, i int) error {
+	if err := a.SetProfile(i); err != nil {
+		return err
+	}
+	p := a.Config.Profiles[i]
+	done(cmd, d, opts, a, p.FPSLimit, p.Name)
+	return nil
 }
 
 func newProfileCmd(d deps, opts *options) *cobra.Command {
@@ -130,26 +76,25 @@ func newProfileCmd(d deps, opts *options) *cobra.Command {
 Without one, lists the profiles; * marks the one MangoHud uses now.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			e, err := load(cmd, d, opts)
+			a, err := load(cmd, d, opts)
 			if err != nil {
 				return err
 			}
 			if len(args) == 1 {
-				i, err := e.cfg.Find(args[0])
+				i, err := a.Config.Find(args[0])
 				if err != nil {
 					return err
 				}
-				return setProfile(cmd, d, opts, e, i)
+				return setProfile(cmd, d, opts, a, i)
 			}
-			current, err := e.current()
+			s, err := a.Status()
 			if err != nil {
 				return err
 			}
-			active := e.cfg.Active(current)
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-			for i, p := range e.cfg.Profiles {
+			for i, p := range a.Config.Profiles {
 				mark := " "
-				if i == active {
+				if i == s.Active {
 					mark = "*"
 				}
 				fmt.Fprintf(w, "%s %d\t%s\t%s\n", mark, i, p.Name, describe(p))
@@ -181,27 +126,15 @@ func newCycleCmd(d deps, opts *options) *cobra.Command {
 profile, starts with the first one (with --back: the last one).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			e, err := load(cmd, d, opts)
+			a, err := load(cmd, d, opts)
 			if err != nil {
 				return err
 			}
-			current, err := e.current()
+			next, err := a.Next(back)
 			if err != nil {
 				return err
 			}
-			n := len(e.cfg.Profiles)
-			next := 0
-			switch active := e.cfg.Active(current); {
-			case active < 0 && back:
-				next = n - 1
-			case active < 0:
-				next = 0
-			case back:
-				next = (active - 1 + n) % n
-			default:
-				next = (active + 1) % n
-			}
-			return setProfile(cmd, d, opts, e, next)
+			return setProfile(cmd, d, opts, a, next)
 		},
 	}
 	cmd.Flags().BoolVarP(&back, "back", "b", false, "the previous profile instead")
@@ -214,51 +147,37 @@ func newStatusCmd(d deps, opts *options) *cobra.Command {
 		Short: "Show the current FPS limit, the profile and the files used",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			e, err := load(cmd, d, opts)
+			a, err := load(cmd, d, opts)
+			if err != nil {
+				return err
+			}
+			s, err := a.Status()
 			if err != nil {
 				return err
 			}
 			out := cmd.OutOrStdout()
-			current, err := e.current()
-			if err != nil {
-				return err
-			}
-			fps, ok := current["fps_limit"]
-			if !ok {
-				fps = "0"
-			}
 			w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-			fmt.Fprintf(w, "FPS limit:\t%s\n", profiles.FPS(normalize(fps)).Label())
-			if i := e.cfg.Active(current); i >= 0 {
-				fmt.Fprintf(w, "Profile:\t%d %q\n", i, e.cfg.Profiles[i].Name)
+			fmt.Fprintf(w, "FPS limit:\t%s\n", s.FPSLimit.Label())
+			if s.Active >= 0 {
+				fmt.Fprintf(w, "Profile:\t%d %q\n", s.Active, a.Config.Profiles[s.Active].Name)
 			} else {
 				fmt.Fprintf(w, "Profile:\tnone matches\n")
 			}
-			fmt.Fprintf(w, "MangoHud config:\t%s\n", e.mango)
-			fmt.Fprintf(w, "Profiles:\t%s\n", e.cfgPath)
+			fmt.Fprintf(w, "MangoHud config:\t%s\n", a.MangoHud)
+			fmt.Fprintf(w, "Profiles:\t%s\n", a.ConfigPath)
 			if err := w.Flush(); err != nil {
 				return err
 			}
-			if e.mangoIsStd {
-				if games := mangohud.PerGameConfigs(e.mango); len(games) > 0 {
-					fmt.Fprintln(out, "\nThese games have their own MangoHud config, which wins over the one above:")
-					for _, g := range games {
-						fmt.Fprintln(out, "  "+g)
-					}
+			if len(s.PerGame) > 0 {
+				fmt.Fprintln(out, "\nThese games have their own MangoHud config, which wins over the one above:")
+				for _, g := range s.PerGame {
+					fmt.Fprintln(out, "  "+g)
 				}
 			}
-			if v := d.getenv("MANGOHUD_CONFIG"); strings.Contains(v, "fps_limit") {
+			if s.EnvOverride {
 				fmt.Fprintln(out, "\nMANGOHUD_CONFIG sets fps_limit too; for games started with it, it wins over the file.")
 			}
 			return nil
 		},
 	}
-}
-
-// normalize shows an fps_limit from MangoHud's file the way profiles do, if it can.
-func normalize(s string) string {
-	if f, err := profiles.ParseFPS(s); err == nil {
-		return string(f)
-	}
-	return s
 }

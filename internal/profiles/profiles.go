@@ -164,65 +164,31 @@ func Path(getenv func(string) string) (string, error) {
 	return filepath.Join(dir, "mangohud-fps-switch", "config.toml"), nil
 }
 
-// Default is written on the first run.
-const Default = `# mangohud-fps-switch profiles. Switch with:
-#   mangohud-fps-switch profile <number or name>   (numbers count from 0, in this order)
-#   mangohud-fps-switch cycle                      (the next one)
-
-# Show a desktop notification on every change.
-notify = true
-
-# The MangoHud config to change. Default: ~/.config/MangoHud/MangoHud.conf
-# (or MANGOHUD_CONFIGFILE, if set).
-# mangohud_config = "~/.config/MangoHud/MangoHud.conf"
-
-# fps_limit: a number (0 = unlimited) or a list like "60,90,0" that MangoHud's
-# toggle_fps_limit key (Shift_L+F1) cycles through.
-# settings: optional, any other MangoHud setting, e.g.
-#   settings = { fps_limit_method = "early", show_fps_limit = true }
-
-[[profile]]
-name = "Unlimited"
-fps_limit = 0
-
-[[profile]]
-name = "45 FPS"
-fps_limit = 45
-
-[[profile]]
-name = "60 FPS"
-fps_limit = 60
-
-[[profile]]
-name = "90 FPS"
-fps_limit = 90
-`
-
-// Load reads config.toml. If it doesn't exist yet, it writes Default first and says so
-// with created.
+// Load reads config.toml. If it doesn't exist yet, it writes DefaultConfig first and says
+// so with created.
 func Load(path string) (cfg Config, created bool, err error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		text := render(DefaultConfig())
+		if err := writeFile(path, text); err != nil {
 			return Config{}, false, err
 		}
-		if err := os.WriteFile(path, []byte(Default), 0o644); err != nil {
-			return Config{}, false, err
-		}
-		data, created = []byte(Default), true
+		data, created = []byte(text), true
 	} else if err != nil {
 		return Config{}, false, err
 	}
 	if err := toml.Unmarshal(data, &cfg); err != nil {
 		return Config{}, created, fmt.Errorf("%s: %w", path, err)
 	}
-	if err := cfg.validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return Config{}, created, fmt.Errorf("%s: %w", path, err)
 	}
 	return cfg, created, nil
 }
 
-func (c Config) validate() error {
+// Validate checks what Load and Save need: at least one profile, unique names, valid
+// values.
+func (c Config) Validate() error {
 	if len(c.Profiles) == 0 {
 		return errors.New("no [[profile]] defined")
 	}
