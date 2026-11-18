@@ -21,6 +21,35 @@ type ProfileService struct {
 	configPath string
 	getenv     func(string) string
 	mu         sync.Mutex
+	// hasTray: the desktop shows tray icons, so starting hidden in the tray makes sense
+	hasTray   bool
+	autostart *autostart
+}
+
+// Autostart is the window's "start with the desktop" switch.
+type Autostart struct {
+	// Available: only with a tray (otherwise the app would start invisibly)
+	Available bool `json:"available"`
+	Enabled   bool `json:"enabled"`
+}
+
+// AutostartState says whether the app starts with the desktop.
+func (s *ProfileService) AutostartState() Autostart {
+	if s.autostart == nil {
+		return Autostart{}
+	}
+	return Autostart{Available: s.hasTray, Enabled: s.autostart.Enabled()}
+}
+
+// SetAutostart turns starting with the desktop (in the tray) on or off.
+func (s *ProfileService) SetAutostart(enable bool) (Autostart, error) {
+	if s.autostart == nil || !s.hasTray {
+		return s.AutostartState(), errors.New("starting with the desktop needs a tray")
+	}
+	if _, err := s.autostart.Set(enable); err != nil {
+		return s.AutostartState(), err
+	}
+	return s.AutostartState(), nil
 }
 
 // Setting is one extra MangoHud setting of a profile, as text.

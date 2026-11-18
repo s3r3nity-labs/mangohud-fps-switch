@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=MangoHud FPS Switch
+GenericName=FPS Limit Switcher
+Comment=Switch MangoHud's FPS limit with profiles, also while a game is running
+Exec=mangohud-fps-switch-gui
+Icon=org.s3r3nity.MangoHudFPSSwitch
+Terminal=false
+Categories=Game;
+Keywords=MangoHud;FPS;frame;limit;gaming;
+StartupNotify=true
+StartupWMClass=org.s3r3nity.MangoHudFPSSwitch

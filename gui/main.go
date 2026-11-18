@@ -38,10 +38,17 @@ func main() {
 	// --hidden: start with just the tray icon (for autostart)
 	hidden := slices.Contains(os.Args[1:], "--hidden")
 	hasTray := trayAvailable()
+	// The real config folder also inside the Flatpak
+	getenv := hostEnv(os.Getenv)
 
 	// For test setups: MANGOHUD_FPS_SWITCH_CONFIG points to another config.toml (whose
 	// mangohud_config can point to another MangoHud config)
-	service := &ProfileService{configPath: os.Getenv("MANGOHUD_FPS_SWITCH_CONFIG"), getenv: os.Getenv}
+	service := &ProfileService{
+		configPath: os.Getenv("MANGOHUD_FPS_SWITCH_CONFIG"),
+		getenv:     getenv,
+		hasTray:    hasTray,
+		autostart:  newAutostart(getenv),
+	}
 
 	var window *application.WebviewWindow
 	a := application.New(application.Options{
@@ -95,7 +102,7 @@ func main() {
 	stop := make(chan struct{})
 	defer close(stop)
 	err := watch(func() []string {
-		l, err := app.Load(os.Getenv, service.configPath)
+		l, err := app.Load(getenv, service.configPath)
 		if err != nil || l == nil {
 			return nil
 		}
