@@ -16,7 +16,15 @@ icon (for autostart). Starting it again shows the running one's window. On deskt
 without tray icons (GNOME without the AppIndicator extension) closing the window quits, as
 it would otherwise run on invisibly.
 
-**Status:** window and tray. Next: autostart, Flatpak.
+**Start with the desktop:** a switch in the window. As a Flatpak the app asks the desktop
+through the Background portal (which writes the autostart entry); otherwise it writes
+`~/.config/autostart/org.s3r3nity.MangoHudFPSSwitch.desktop` itself, starting `--hidden`.
+
+**Flatpak:** `build/flatpak/` (manifest, desktop file, AppStream metadata), built by
+`.github/workflows/flatpak.yml`: on pull requests unsigned as a downloadable artifact, on
+releases signed into the s3r3nity-labs Flatpak repository. Inside the sandbox
+`XDG_CONFIG_HOME` is the app's own folder, so the app uses the real `~/.config` (see
+`hostEnv`); it may only touch `~/.config/MangoHud` and `~/.config/mangohud-fps-switch`.
 
 ## Development
 

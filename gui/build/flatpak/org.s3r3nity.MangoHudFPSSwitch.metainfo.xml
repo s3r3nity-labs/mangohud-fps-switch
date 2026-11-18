@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What app stores (GNOME Software, Discover) show about MangoHud FPS Switch -->
+<component type="desktop-application">
+  <id>org.s3r3nity.MangoHudFPSSwitch</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>MangoHud FPS Switch</name>
+  <summary>Switch MangoHud's FPS limit with profiles, also while a game is running</summary>
+  <developer id="org.s3r3nity">
+    <name>s3r3nity-labs</name>
+  </developer>
+  <description>
+    <p>
+      Keeps FPS profiles like Unlimited, 45, 60 or 90 FPS and sets MangoHud's FPS limit to
+      one of them with a click in the tray. A running game picks up the change right away,
+      no restart needed. An independent tool for MangoHud, not part of the MangoHud project.
+    </p>
+    <ul>
+      <li>Profiles in the tray menu; the active one is marked</li>
+      <li>Add, edit and order profiles, optionally with more MangoHud settings</li>
+      <li>Starts with the desktop in the tray if you like</li>
+      <li>Works together with the mangohud-fps-switch command for keyboard shortcuts</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">org.s3r3nity.MangoHudFPSSwitch.desktop</launchable>
+  <url type="homepage">https://github.com/s3r3nity-labs/mangohud-fps-switch</url>
+  <url type="bugtracker">https://github.com/s3r3nity-labs/mangohud-fps-switch/issues</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.2.0" date="2026-11-18">
+      <description>
+        <p>First release of the desktop app: profiles in a window and in the tray, starting
+        with the desktop.</p>
+      </description>
+    </release>
+  </releases>
+  <branding>
+    <color type="primary" scheme_preference="light">#ffd9ad</color>
+    <color type="primary" scheme_preference="dark">#7a3f05</color>
+  </branding>
+</component>

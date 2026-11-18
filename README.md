@@ -30,6 +30,22 @@ curl -sL https://github.com/s3r3nity-labs/mangohud-fps-switch/releases/latest/do
   | tar -xz -C ~/.local/bin mangohud-fps-switch
 ```
 
+## Desktop app
+
+**MangoHud FPS Switch** puts the profiles in the tray (click one to use it) and has a
+window to add, edit and order them. It can start with the desktop, in the tray. It
+uses the same `config.toml` as the command, so shortcuts and app stay in step. Install it
+from the [s3r3nity-labs Flatpak repository](https://s3r3nity-labs.github.io/flatpak/):
+
+```fish
+flatpak install --user https://s3r3nity-labs.github.io/flatpak/org.s3r3nity.MangoHudFPSSwitch.flatpakref
+```
+
+The Flatpak contains the command too:
+`flatpak run --command=mangohud-fps-switch org.s3r3nity.MangoHudFPSSwitch profile 1`.
+It can only change the MangoHud config in `~/.config/MangoHud`, so a `mangohud_config`
+somewhere else needs the Homebrew version. Source and development: [gui/](gui/).
+
 ## Keyboard shortcuts
 
 Bind the profiles to keys, e.g. in KDE Plasma: *System Settings → Keyboard → Shortcuts →

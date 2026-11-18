@@ -23,12 +23,14 @@
   import TriangleAlert from "@lucide/svelte/icons/triangle-alert";
   import Check from "@lucide/svelte/icons/check";
   import { ProfileService } from "../bindings/github.com/s3r3nity-labs/mangohud-fps-switch/gui";
-  import type { Profile, State } from "../bindings/github.com/s3r3nity-labs/mangohud-fps-switch/gui/models";
+  import type { Autostart, Profile, State } from "../bindings/github.com/s3r3nity-labs/mangohud-fps-switch/gui/models";
   import ProfileDialog from "$lib/ProfileDialog.svelte";
 
   let st = $state<State | null>(null);
   let error = $state("");
   let customFPS = $state("");
+  let autostart = $state<Autostart>({ available: false, enabled: false });
+  let autostartBusy = $state(false);
   let mangoConfig = $state("");
 
   // The profile dialog: index -1 is a new profile
@@ -133,8 +135,21 @@
     if (st && mangoConfig.trim() !== st.mangoHudConfig) await save(profiles, { mangoHudConfig: mangoConfig.trim() });
   }
 
+  async function setAutostart(on: boolean) {
+    autostartBusy = true;
+    try {
+      autostart = await ProfileService.SetAutostart(on);
+    } catch (e) {
+      toast.error(message(e));
+      autostart = await ProfileService.AutostartState();
+    } finally {
+      autostartBusy = false;
+    }
+  }
+
   onMount(() => {
     load();
+    ProfileService.AutostartState().then((a) => (autostart = a));
     // A shortcut, the CLI or an editor changed a config file
     return Events.On("state-changed", load);
   });
@@ -269,6 +284,16 @@
           </Label>
           <Switch id="notify" checked={st.notify} onCheckedChange={(v) => save(profiles, { notify: v })} />
         </div>
+        {#if autostart.available}
+          <div class="flex items-center justify-between gap-4">
+            <Label for="autostart" class="flex flex-col items-start gap-1">
+              <span>Start with the desktop</span>
+              <span class="text-muted-foreground text-sm font-normal">In the tray, without opening the window.</span>
+            </Label>
+            <Switch id="autostart" checked={autostart.enabled} disabled={autostartBusy}
+              onCheckedChange={(v) => setAutostart(v)} />
+          </div>
+        {/if}
         <div class="grid gap-2">
           <Label for="mango">MangoHud config</Label>
           <Input id="mango" bind:value={mangoConfig} placeholder="~/.config/MangoHud/MangoHud.conf (default)"

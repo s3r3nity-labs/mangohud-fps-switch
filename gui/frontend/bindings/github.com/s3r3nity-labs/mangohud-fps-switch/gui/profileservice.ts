@@ -17,6 +17,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 /**
+ * AutostartState says whether the app starts with the desktop.
+ */
+export function AutostartState(): $CancellablePromise<$models.Autostart> {
+    return $Call.ByID(327634834);
+}
+
+/**
  * CheckFPS says what's wrong with a typed FPS limit, or "" if it's fine (for the form).
  */
 export function CheckFPS(fps: string): $CancellablePromise<string> {
@@ -28,6 +35,13 @@ export function CheckFPS(fps: string): $CancellablePromise<string> {
  */
 export function Save(e: $models.Edit): $CancellablePromise<$models.State> {
     return $Call.ByID(2176397137, e);
+}
+
+/**
+ * SetAutostart turns starting with the desktop (in the tray) on or off.
+ */
+export function SetAutostart(enable: boolean): $CancellablePromise<$models.Autostart> {
+    return $Call.ByID(2513604105, enable);
 }
 
 /**

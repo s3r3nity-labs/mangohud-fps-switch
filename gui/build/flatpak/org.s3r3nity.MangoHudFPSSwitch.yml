@@ -1,0 +1,65 @@
+# Flatpak manifest for MangoHud FPS Switch, built by .github/workflows/flatpak.yml:
+#   flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo build \
+#     gui/build/flatpak/org.s3r3nity.MangoHudFPSSwitch.yml
+#
+# The GNOME runtime brings GTK4 and WebKitGTK 6.0. Built inside the SDK, so it links
+# exactly against the runtime's libraries. Contains the app and the CLI
+# (flatpak run --command=mangohud-fps-switch org.s3r3nity.MangoHudFPSSwitch profile 1).
+id: org.s3r3nity.MangoHudFPSSwitch
+runtime: org.gnome.Platform
+runtime-version: "51"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.golang
+  - org.freedesktop.Sdk.Extension.node26
+command: mangohud-fps-switch-gui
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # MangoHud's config: the app's whole job is changing it (and listing per-game configs)
+  - --filesystem=xdg-config/MangoHud
+  # The profiles, shared with the CLI installed outside the Flatpak (e.g. Homebrew)
+  - --filesystem=xdg-config/mangohud-fps-switch:create
+  # Read only: whether the autostart entry (written by the desktop through the Background
+  # portal) exists, for the window's switch
+  - --filesystem=xdg-config/autostart:ro
+  # The tray icon (StatusNotifierItem) and the CLI's notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.Notifications
+modules:
+  - name: mangohud-fps-switch
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/golang/bin:/usr/lib/sdk/node26/bin
+      # go mod download and npm ci need the network. Fine for our own repository; Flathub
+      # builds offline and would need the dependencies listed as sources instead.
+      build-args:
+        - --share=network
+      env:
+        GOPATH: /run/build/mangohud-fps-switch/.go
+        GOCACHE: /run/build/mangohud-fps-switch/.gocache
+        GOFLAGS: -modcacherw
+        npm_config_cache: /run/build/mangohud-fps-switch/.npm
+    build-commands:
+      - cd gui/frontend && npm ci --no-audit --no-fund && npm run build
+      - cd gui && CGO_ENABLED=1 go build -tags production -trimpath -buildvcs=false -ldflags="-w -s" -o mangohud-fps-switch-gui .
+      - CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="-w -s -X github.com/s3r3nity-labs/mangohud-fps-switch/cmd.version=${APP_VERSION:-flatpak}" -o mangohud-fps-switch .
+      - install -Dm755 gui/mangohud-fps-switch-gui /app/bin/mangohud-fps-switch-gui
+      - install -Dm755 mangohud-fps-switch /app/bin/mangohud-fps-switch
+      - install -Dm644 gui/build/flatpak/org.s3r3nity.MangoHudFPSSwitch.desktop /app/share/applications/org.s3r3nity.MangoHudFPSSwitch.desktop
+      - install -Dm644 gui/build/flatpak/org.s3r3nity.MangoHudFPSSwitch.metainfo.xml /app/share/metainfo/org.s3r3nity.MangoHudFPSSwitch.metainfo.xml
+      - install -Dm644 gui/build/appicon.svg /app/share/icons/hicolor/scalable/apps/org.s3r3nity.MangoHudFPSSwitch.svg
+    sources:
+      - type: dir
+        path: ../../..
+        skip:
+          - .git
+          - gui/bin
+          - gui/frontend/node_modules
+          - gui/frontend/dist
+          - dist
+          - .flatpak-builder
+          - flatpak-build
+          - flatpak-repo
