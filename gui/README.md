@@ -9,7 +9,14 @@ config files.
 Built with [Wails 3](https://v3.wails.io) (Go backend, system WebView), Svelte 5,
 Tailwind CSS 4 and [shadcn-svelte](https://shadcn-svelte.com), like Home Sync.
 
-**Status:** the window. Next: tray icon, autostart, Flatpak.
+**Tray icon:** the profiles in its menu (click one to use it, the active one is marked),
+Open window and Quit; left click shows or hides the window; hovering shows the current
+limit. Closing the window keeps the app in the tray. `--hidden` starts with just the tray
+icon (for autostart). Starting it again shows the running one's window. On desktops
+without tray icons (GNOME without the AppIndicator extension) closing the window quits, as
+it would otherwise run on invisibly.
+
+**Status:** window and tray. Next: autostart, Flatpak.
 
 ## Development
 
@@ -33,12 +40,16 @@ env XDG_CONFIG_HOME=/tmp/mangohud-fps-switch-demo wails3 dev
 
 - `service.go` – `ProfileService`, the Go methods the window calls; `wails3 build`/`dev`
   turn them into `frontend/bindings`
-- `watch.go` – watches config.toml and the MangoHud config, tells the window to reload
+- `watch.go` – watches config.toml and the MangoHud config, tells the window and the
+  tray to reload
+- `tray.go` – the tray icon: `trayMenu` decides the menu's lines (tested), `tray` builds
+  it with Wails; `build/tray.png` is the icon at 64 px
 - `frontend/src/App.svelte` – the window; `frontend/src/lib/ProfileDialog.svelte` – add/edit
   a profile; `frontend/src/lib/components/ui` – shadcn-svelte components
 - `build/appicon.svg` – the icon; `wails3 build` makes the PNG-based ones from
-  `build/appicon.png` (render it after changing the SVG:
-  `inkscape build/appicon.svg --export-type=png --export-filename=build/appicon.png -w 1024 -h 1024`)
+  `build/appicon.png` (render it and the tray icon after changing the SVG:
+  `inkscape build/appicon.svg --export-type=png --export-filename=build/appicon.png -w 1024 -h 1024`,
+  the same with `build/tray.png` and `-w 64 -h 64`)
 - `go.mod` uses the parent module through `replace … => ../`, so the CLI's `go.mod` stays
   free of Wails and cgo
 
