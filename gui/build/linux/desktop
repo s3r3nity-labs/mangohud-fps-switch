@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=MangoHud FPS Switch
+Comment=Switch MangoHud's FPS limit with profiles, also while a game is running
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/mangohud-fps-switch-gui %u
+Terminal=false
+Type=Application
+Icon=mangohud-fps-switch-gui
+Categories=Utility;
+StartupWMClass=mangohud-fps-switch-gui
+
+ 

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=mangohud-fps-switch-gui
+Exec=mangohud-fps-switch-gui
+Icon=mangohud-fps-switch-gui
+Categories=Development;
+Terminal=false
+Keywords=wails
+Version=1.0
+StartupNotify=false
