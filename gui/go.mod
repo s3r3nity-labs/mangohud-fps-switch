@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/godbus/dbus/v5 v5.2.4
-	github.com/s3r3nity-labs/mangohud-fps-switch v0.1.0
+	github.com/s3r3nity-labs/mangohud-fps-switch v0.2.0
 	github.com/wailsapp/wails/v3 v3.1.0
 )
 
